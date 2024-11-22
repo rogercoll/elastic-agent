@@ -5,6 +5,8 @@ connectors:
         description: Count of log records
         sum:
           value: "1" # count each log record as 1
+        attributes:
+         - key: log.file.name
 
 receivers:
   # Receiver for platform specific log files
