@@ -1,3 +1,11 @@
+connectors:
+  signaltometrics:
+    logs:
+      - name: log.record.count
+        description: Count of log records
+        sum:
+          value: "1" # count each log record as 1
+
 receivers:
   # Receiver for platform specific log files
   filelog/platformlogs:
@@ -46,6 +54,18 @@ extensions:
     directory: ${env:STORAGE_DIR}
 
 processors:
+  lsminterval:
+    intervals:
+      - duration: 1m
+        statements:
+          - set(resource.attributes["metricset.interval"], "1m")
+          - set(attributes["data_stream.dataset"], Concat([attributes["metricset.name"], "1m"], "."))
+          - set(attributes["processor.event"], "metric")
+      - duration: 10m
+        statements:
+          - set(resource.attributes["metricset.interval"], "10m")
+          - set(attributes["data_stream.dataset"], Concat([attributes["metricset.name"], "10m"], "."))
+          - set(attributes["processor.event"], "metric")
   elasticinframetrics:
   resourcedetection:
     detectors: ["system"]
@@ -122,7 +142,11 @@ service:
       receivers: [hostmetrics/system]
       processors: [elasticinframetrics, resourcedetection, attributes/dataset, resource/process]
       exporters: [elasticsearch/ecs]
+    metrics/aggregated-metrics:
+      receivers: [signaltometrics]
+      processors: [lsminterval]
+      exporters: [elasticsearch/otel]
     logs/platformlogs:
       receivers: [filelog/platformlogs]
       processors: [resourcedetection]
-      exporters: [elasticsearch/otel]
+      exporters: [elasticsearch/otel, signaltometrics]
